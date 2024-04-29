@@ -1,20 +1,84 @@
 const { configDotenv } = require('dotenv');
+import cors from 'cors';
 const express = require('express');
 const mongoose = require('mongoose');
 require('dotenv').config();
 
 const app = express();
+//middlewares
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+app.use(cors());
+
 const PORT = process.env.PORT || 3000;
 
 mongoose.connect(process.env.MONGO_URI, {
-    useNewUrlParser: true
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
 });
+
+const productSchema = new mongoose.Schema({
+    productID: { type:String, required: true, unique: true },
+    name: { type: String, required: true },
+    price: { type: Number, required: true },
+    featured: { type: Boolean, default: false },
+    rating: { type: Number, default: 0 },
+    createdAt: { type: Date, default: Date.now },
+    company: {type: String, required: true}
+});
+
+const Product = mongoose.model('product-details', productSchema);
+
+
 const db = mongoose.connection;
 db.on('error', (error) => console.log(error));
 db.once('open', () => console.log('Connected to Database'));
 
-app.get("/", (req, res) => {
-    res.send("Hello World");
+//read the data
+app.get("/",async(req, res) => {
+    const data = await Product.find();
+    res.json({success: true, data: data});
+});
+
+//create the product data or add a product
+app.post("/create", async(req, res) => {
+    const product = new Product(req.body);
+    await product.save();
+    res.send({sucess: true, message: "Product created successfully"});
+});
+
+//Update the product details
+app.put("/update", async(req, res) => {
+    const { id, ...rest} = req.body;
+    await Product.updateOne({_id : req.body.id},rest);
+    res.send({success: true, message: "Product updated successfully"});
+});
+
+//Delete the product
+app.delete("/delete/:id", async(req, res) => {
+    const id = req.params.id;
+    await Product.deleteOne({_id: id});
+    res.send({success: true, message: "Product deleted successfully"});
+});
+
+//get the featured products
+app.get("/featured", async(req, res) => {
+    const data = await Product.find({featured: true});
+    res.json({success: true, data: data});
+});
+
+//get products with price below a certain value
+app.get("/price/:price", async(req, res) => {
+    const price = req.params.price;
+    const data = await Product.find({price: {$lt: price}});
+    res.json({success: true, data: data});
+});
+
+//get products with ratings above a certain value
+app.get("/rating/:rating", async(req, res) => {
+    const rating = req.params.rating;
+    const data = await Product.find({rating: {$gt: rating}});
+    res.json({success: true, data: data});
 });
 
 app.listen(PORT, () => {
