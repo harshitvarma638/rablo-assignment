@@ -2,13 +2,17 @@ const { configDotenv } = require('dotenv');
 const cors = require('cors');
 const express = require('express');
 const mongoose = require('mongoose');
+const routes = require('./routes');
 require('dotenv').config();
+const bodyParser = require('body-parser');
 
 const app = express();
 //middlewares
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cors());
+app.use(bodyParser.json());
+app.use('/api', routes);
 
 const PORT = process.env.PORT || 3000;
 
@@ -16,19 +20,7 @@ mongoose.connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
 });
-
-const productSchema = new mongoose.Schema({
-    productID: { type:String, required: true, unique: true },
-    name: { type: String, required: true },
-    price: { type: Number, required: true },
-    featured: { type: Boolean, default: false },
-    rating: { type: Number, default: 0 },
-    createdAt: { type: Date, default: Date.now },
-    company: {type: String, required: true}
-});
-
-const Product = mongoose.model('product-details', productSchema);
-
+const Product = require('./models/schema');
 
 const db = mongoose.connection;
 db.on('error', (error) => console.log(error));
